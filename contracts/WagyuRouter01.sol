@@ -1,29 +1,29 @@
 pragma solidity =0.6.6;
 
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol';
-import '@uniswap/lib/contracts/libraries/TransferHelper.sol';
 
+import './libraries/TransferHelper.sol';
 import './libraries/WagyuLibrary.sol';
 import './interfaces/IWagyuRouter01.sol';
 import './interfaces/IERC20.sol';
-import './interfaces/IWETH.sol';
+import './interfaces/IWVLX.sol';
 
 contract WagyuRouter01 is IWagyuRouter01 {
     address public immutable override factory;
-    address public immutable override WETH;
+    address public immutable override WVLX;
 
     modifier ensure(uint deadline) {
         require(deadline >= block.timestamp, 'WagyuRouter: EXPIRED');
         _;
     }
 
-    constructor(address _factory, address _WETH) public {
+    constructor(address _factory, address _WVLX) public {
         factory = _factory;
-        WETH = _WETH;
+        WVLX = _WVLX;
     }
 
     receive() external payable {
-        assert(msg.sender == WETH); // only accept ETH via fallback from the WETH contract
+        assert(msg.sender == WVLX); // only accept VLX via fallback from the WVLX contract
     }
 
     // **** ADD LIQUIDITY ****
@@ -71,28 +71,28 @@ contract WagyuRouter01 is IWagyuRouter01 {
         TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB);
         liquidity = IUniswapV2Pair(pair).mint(to);
     }
-    function addLiquidityETH(
+    function addLiquidityVLX(
         address token,
         uint amountTokenDesired,
         uint amountTokenMin,
-        uint amountETHMin,
+        uint amountVLXMin,
         address to,
         uint deadline
-    ) external override payable ensure(deadline) returns (uint amountToken, uint amountETH, uint liquidity) {
-        (amountToken, amountETH) = _addLiquidity(
+    ) external override payable ensure(deadline) returns (uint amountToken, uint amountVLX, uint liquidity) {
+        (amountToken, amountVLX) = _addLiquidity(
             token,
-            WETH,
+            WVLX,
             amountTokenDesired,
             msg.value,
             amountTokenMin,
-            amountETHMin
+            amountVLXMin
         );
-        address pair = WagyuLibrary.pairFor(factory, token, WETH);
+        address pair = WagyuLibrary.pairFor(factory, token, WVLX);
         TransferHelper.safeTransferFrom(token, msg.sender, pair, amountToken);
-        IWETH(WETH).deposit{value: amountETH}();
-        assert(IWETH(WETH).transfer(pair, amountETH));
+        IWVLX(WVLX).deposit{value: amountVLX}();
+        assert(IWVLX(WVLX).transfer(pair, amountVLX));
         liquidity = IUniswapV2Pair(pair).mint(to);
-        if (msg.value > amountETH) TransferHelper.safeTransferETH(msg.sender, msg.value - amountETH); // refund dust eth, if any
+        if (msg.value > amountVLX) TransferHelper.safeTransferVLX(msg.sender, msg.value - amountVLX); // refund dust vlx, if any
     }
 
     // **** REMOVE LIQUIDITY ****
@@ -113,26 +113,26 @@ contract WagyuRouter01 is IWagyuRouter01 {
         require(amountA >= amountAMin, 'WagyuRouter: INSUFFICIENT_A_AMOUNT');
         require(amountB >= amountBMin, 'WagyuRouter: INSUFFICIENT_B_AMOUNT');
     }
-    function removeLiquidityETH(
+    function removeLiquidityVLX(
         address token,
         uint liquidity,
         uint amountTokenMin,
-        uint amountETHMin,
+        uint amountVLXMin,
         address to,
         uint deadline
-    ) public override ensure(deadline) returns (uint amountToken, uint amountETH) {
-        (amountToken, amountETH) = removeLiquidity(
+    ) public override ensure(deadline) returns (uint amountToken, uint amountVLX) {
+        (amountToken, amountVLX) = removeLiquidity(
             token,
-            WETH,
+            WVLX,
             liquidity,
             amountTokenMin,
-            amountETHMin,
+            amountVLXMin,
             address(this),
             deadline
         );
         TransferHelper.safeTransfer(token, to, amountToken);
-        IWETH(WETH).withdraw(amountETH);
-        TransferHelper.safeTransferETH(to, amountETH);
+        IWVLX(WVLX).withdraw(amountVLX);
+        TransferHelper.safeTransferVLX(to, amountVLX);
     }
     function removeLiquidityWithPermit(
         address tokenA,
@@ -149,19 +149,19 @@ contract WagyuRouter01 is IWagyuRouter01 {
         IUniswapV2Pair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
         (amountA, amountB) = removeLiquidity(tokenA, tokenB, liquidity, amountAMin, amountBMin, to, deadline);
     }
-    function removeLiquidityETHWithPermit(
+    function removeLiquidityVLXWithPermit(
         address token,
         uint liquidity,
         uint amountTokenMin,
-        uint amountETHMin,
+        uint amountVLXMin,
         address to,
         uint deadline,
         bool approveMax, uint8 v, bytes32 r, bytes32 s
-    ) external override returns (uint amountToken, uint amountETH) {
-        address pair = WagyuLibrary.pairFor(factory, token, WETH);
+    ) external override returns (uint amountToken, uint amountVLX) {
+        address pair = WagyuLibrary.pairFor(factory, token, WVLX);
         uint value = approveMax ? uint(-1) : liquidity;
         IUniswapV2Pair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
-        (amountToken, amountETH) = removeLiquidityETH(token, liquidity, amountTokenMin, amountETHMin, to, deadline);
+        (amountToken, amountVLX) = removeLiquidityVLX(token, liquidity, amountTokenMin, amountVLXMin, to, deadline);
     }
 
     // **** SWAP ****
@@ -200,62 +200,62 @@ contract WagyuRouter01 is IWagyuRouter01 {
         TransferHelper.safeTransferFrom(path[0], msg.sender, WagyuLibrary.pairFor(factory, path[0], path[1]), amounts[0]);
         _swap(amounts, path, to);
     }
-    function swapExactETHForTokens(uint amountOutMin, address[] calldata path, address to, uint deadline)
+    function swapExactVLXForTokens(uint amountOutMin, address[] calldata path, address to, uint deadline)
         external
         override
         payable
         ensure(deadline)
         returns (uint[] memory amounts)
     {
-        require(path[0] == WETH, 'WagyuRouter: INVALID_PATH');
+        require(path[0] == WVLX, 'WagyuRouter: INVALID_PATH');
         amounts = WagyuLibrary.getAmountsOut(factory, msg.value, path);
         require(amounts[amounts.length - 1] >= amountOutMin, 'WagyuRouter: INSUFFICIENT_OUTPUT_AMOUNT');
-        IWETH(WETH).deposit{value: amounts[0]}();
-        assert(IWETH(WETH).transfer(WagyuLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
+        IWVLX(WVLX).deposit{value: amounts[0]}();
+        assert(IWVLX(WVLX).transfer(WagyuLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
         _swap(amounts, path, to);
     }
-    function swapTokensForExactETH(uint amountOut, uint amountInMax, address[] calldata path, address to, uint deadline)
+    function swapTokensForExactVLX(uint amountOut, uint amountInMax, address[] calldata path, address to, uint deadline)
         external
         override
         ensure(deadline)
         returns (uint[] memory amounts)
     {
-        require(path[path.length - 1] == WETH, 'WagyuRouter: INVALID_PATH');
+        require(path[path.length - 1] == WVLX, 'WagyuRouter: INVALID_PATH');
         amounts = WagyuLibrary.getAmountsIn(factory, amountOut, path);
         require(amounts[0] <= amountInMax, 'WagyuRouter: EXCESSIVE_INPUT_AMOUNT');
         TransferHelper.safeTransferFrom(path[0], msg.sender, WagyuLibrary.pairFor(factory, path[0], path[1]), amounts[0]);
         _swap(amounts, path, address(this));
-        IWETH(WETH).withdraw(amounts[amounts.length - 1]);
-        TransferHelper.safeTransferETH(to, amounts[amounts.length - 1]);
+        IWVLX(WVLX).withdraw(amounts[amounts.length - 1]);
+        TransferHelper.safeTransferVLX(to, amounts[amounts.length - 1]);
     }
-    function swapExactTokensForETH(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline)
+    function swapExactTokensForVLX(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline)
         external
         override
         ensure(deadline)
         returns (uint[] memory amounts)
     {
-        require(path[path.length - 1] == WETH, 'WagyuRouter: INVALID_PATH');
+        require(path[path.length - 1] == WVLX, 'WagyuRouter: INVALID_PATH');
         amounts = WagyuLibrary.getAmountsOut(factory, amountIn, path);
         require(amounts[amounts.length - 1] >= amountOutMin, 'WagyuRouter: INSUFFICIENT_OUTPUT_AMOUNT');
         TransferHelper.safeTransferFrom(path[0], msg.sender, WagyuLibrary.pairFor(factory, path[0], path[1]), amounts[0]);
         _swap(amounts, path, address(this));
-        IWETH(WETH).withdraw(amounts[amounts.length - 1]);
-        TransferHelper.safeTransferETH(to, amounts[amounts.length - 1]);
+        IWVLX(WVLX).withdraw(amounts[amounts.length - 1]);
+        TransferHelper.safeTransferVLX(to, amounts[amounts.length - 1]);
     }
-    function swapETHForExactTokens(uint amountOut, address[] calldata path, address to, uint deadline)
+    function swapVLXForExactTokens(uint amountOut, address[] calldata path, address to, uint deadline)
         external
         override
         payable
         ensure(deadline)
         returns (uint[] memory amounts)
     {
-        require(path[0] == WETH, 'WagyuRouter: INVALID_PATH');
+        require(path[0] == WVLX, 'WagyuRouter: INVALID_PATH');
         amounts = WagyuLibrary.getAmountsIn(factory, amountOut, path);
         require(amounts[0] <= msg.value, 'WagyuRouter: EXCESSIVE_INPUT_AMOUNT');
-        IWETH(WETH).deposit{value: amounts[0]}();
-        assert(IWETH(WETH).transfer(WagyuLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
+        IWVLX(WVLX).deposit{value: amounts[0]}();
+        assert(IWVLX(WVLX).transfer(WagyuLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
         _swap(amounts, path, to);
-        if (msg.value > amounts[0]) TransferHelper.safeTransferETH(msg.sender, msg.value - amounts[0]); // refund dust eth, if any
+        if (msg.value > amounts[0]) TransferHelper.safeTransferVLX(msg.sender, msg.value - amounts[0]); // refund dust vlx, if any
     }
 
     function quote(uint amountA, uint reserveA, uint reserveB) public pure override returns (uint amountB) {

@@ -37,7 +37,7 @@ contract RouterEventEmitter {
         emit Amounts(abi.decode(returnData, (uint[])));
     }
 
-    function swapExactETHForTokens(
+    function swapExactVLXForTokens(
         address router,
         uint amountOutMin,
         address[] calldata path,
@@ -45,13 +45,13 @@ contract RouterEventEmitter {
         uint deadline
     ) external payable {
         (bool success, bytes memory returnData) = router.delegatecall(abi.encodeWithSelector(
-            IWagyuRouter01(router).swapExactETHForTokens.selector, amountOutMin, path, to, deadline
+            IWagyuRouter01(router).swapExactVLXForTokens.selector, amountOutMin, path, to, deadline
         ));
         assert(success);
         emit Amounts(abi.decode(returnData, (uint[])));
     }
 
-    function swapTokensForExactETH(
+    function swapTokensForExactVLX(
         address router,
         uint amountOut,
         uint amountInMax,
@@ -60,13 +60,13 @@ contract RouterEventEmitter {
         uint deadline
     ) external {
         (bool success, bytes memory returnData) = router.delegatecall(abi.encodeWithSelector(
-            IWagyuRouter01(router).swapTokensForExactETH.selector, amountOut, amountInMax, path, to, deadline
+            IWagyuRouter01(router).swapTokensForExactVLX.selector, amountOut, amountInMax, path, to, deadline
         ));
         assert(success);
         emit Amounts(abi.decode(returnData, (uint[])));
     }
 
-    function swapExactTokensForETH(
+    function swapExactTokensForVLX(
         address router,
         uint amountIn,
         uint amountOutMin,
@@ -75,13 +75,13 @@ contract RouterEventEmitter {
         uint deadline
     ) external {
         (bool success, bytes memory returnData) = router.delegatecall(abi.encodeWithSelector(
-            IWagyuRouter01(router).swapExactTokensForETH.selector, amountIn, amountOutMin, path, to, deadline
+            IWagyuRouter01(router).swapExactTokensForVLX.selector, amountIn, amountOutMin, path, to, deadline
         ));
         assert(success);
         emit Amounts(abi.decode(returnData, (uint[])));
     }
 
-    function swapETHForExactTokens(
+    function swapVLXForExactTokens(
         address router,
         uint amountOut,
         address[] calldata path,
@@ -89,7 +89,7 @@ contract RouterEventEmitter {
         uint deadline
     ) external payable {
         (bool success, bytes memory returnData) = router.delegatecall(abi.encodeWithSelector(
-            IWagyuRouter01(router).swapETHForExactTokens.selector, amountOut, path, to, deadline
+            IWagyuRouter01(router).swapVLXForExactTokens.selector, amountOut, path, to, deadline
         ));
         assert(success);
         emit Amounts(abi.decode(returnData, (uint[])));
